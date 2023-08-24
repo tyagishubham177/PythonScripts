@@ -16,26 +16,30 @@ def extract_text_from_frame(args):
 
 def process_video(video_path, start_time=0, run_for_10_sec=True, step=30):
     vidcap = cv2.VideoCapture(video_path)
-
-    fps = vidcap.get(cv2.CAP_PROP_FPS)  # Frames per second
-    start_frame = int(start_time * fps)  # Converting start time to start frame
+    fps = vidcap.get(cv2.CAP_PROP_FPS)
+    start_frame = int(start_time * fps)
     end_frame = start_frame + 10 * int(fps) if run_for_10_sec else int(vidcap.get(cv2.CAP_PROP_FRAME_COUNT))
 
-    frame_args = []  # Will store tuples of (image, frame_num, fps)
-
+    prev_text = None
+    texts = []
     for frame_num in range(start_frame, end_frame, step):
         vidcap.set(cv2.CAP_PROP_POS_FRAMES, frame_num)
         success, image = vidcap.read()
         if success:
-            frame_args.append((image, frame_num, fps))
-
-    pool = mp.Pool(mp.cpu_count())
-    texts = pool.map(extract_text_from_frame, frame_args)
-    pool.close()
-    pool.join()
+            print(f"Extracting text from frame {frame_num}")  # Debugging
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            text = pytesseract.image_to_string(gray)
+            print(f"Done extracting text from frame {frame_num}")  # Debugging
+            if text != prev_text:  # Only record it if the text is different from the last recorded text
+                texts.append(f"{frame_num/fps:.2f}:\n{text}\n{'-'*50}\n")
+                prev_text = text
     vidcap.release()
 
     return "\n".join(texts)
+
+
+
+
 
 def write_text_to_file(output_file_path, text):
     with open(output_file_path, 'a', encoding='utf-8') as f:  # 'a' to append to the file
@@ -43,9 +47,9 @@ def write_text_to_file(output_file_path, text):
 
 # Usage
 if __name__ == '__main__':
-    video_path = r'C:\Users\Shubham Tyagi\Downloads\Shikwa.mp4'
-    output_file_name = video_path.split("\\")[-1].split(".")[0] + "-Txt.txt"
-    output_file_path = r'C:\Users\Shubham Tyagi\Desktop\\' + output_file_name
+    video_path = r'C:\Users\Shubham Tyagi\Downloads\{Your-filename-here}.mp4' # add video path
+    output_file_name = video_path.split("\\")[-1].split(".")[0] + "-Txt.txt" 
+    output_file_path = r'C:\Users\{your username}\Desktop\\' + output_file_name # add output path here
 
     start_time = 0  # Start at the 0th second
     run_for_10_sec = True  # Run for 10 seconds
